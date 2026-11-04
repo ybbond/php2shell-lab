@@ -1,0 +1,111 @@
+x-common-config: &common-config
+  mem_limit: 48m
+  memswap_limit: 48m
+  pids_limit: 16
+  volumes:
+    - ./src:/var/www/html
+    - ./config/php.ini:/usr/local/etc/php/conf.d/99-lab.ini:ro
+    - ./config/mpm_prefork.conf:/etc/apache2/mods-enabled/mpm_prefork.conf:ro
+
+services:
+  # =========================================================================
+  # Kelompok Versi BELUM FIXED (Unpatched) — Port 808x
+  # =========================================================================
+  php85-unfixed:
+    <<: *common-config
+    build:
+      context: .
+      args:
+        PHP_TAG: 8.5.11-apache
+        PHP_STATUS: unfixed
+    container_name: php85-unfixed
+    ports:
+      - "8085:80"
+    profiles: ["unfixed", "all"]
+
+  php84-unfixed:
+    <<: *common-config
+    build:
+      context: .
+      args:
+        PHP_TAG: 8.4.26-apache
+        PHP_STATUS: unfixed
+    container_name: php84-unfixed
+    ports:
+      - "8084:80"
+    profiles: ["unfixed", "all"]
+
+  php83-unfixed:
+    <<: *common-config
+    build:
+      context: .
+      args:
+        PHP_TAG: 8.3.35-apache
+        PHP_STATUS: unfixed
+    container_name: php83-unfixed
+    ports:
+      - "8083:80"
+    profiles: ["unfixed", "all"]
+
+  php82-unfixed:
+    <<: *common-config
+    build:
+      context: .
+      args:
+        PHP_TAG: 8.2.34-apache
+        PHP_STATUS: unfixed
+    container_name: php82-unfixed
+    ports:
+      - "8082:80"
+    profiles: ["unfixed", "all"]
+
+  # =========================================================================
+  # Kelompok Versi SUDAH FIXED (Patched) — Port 818x
+  # =========================================================================
+  php85-fixed:
+    <<: *common-config
+    build:
+      context: .
+      args:
+        PHP_TAG: 8.5.12-apache
+        PHP_STATUS: fixed
+    container_name: php85-fixed
+    ports:
+      - "8185:80"
+    profiles: ["fixed", "all"]
+
+  php84-fixed:
+    <<: *common-config
+    build:
+      context: .
+      args:
+        PHP_TAG: 8.4.27-apache
+        PHP_STATUS: fixed
+    container_name: php84-fixed
+    ports:
+      - "8184:80"
+    profiles: ["fixed", "all"]
+
+  php83-fixed:
+    <<: *common-config
+    build:
+      context: .
+      args:
+        PHP_TAG: 8.3.36-apache
+        PHP_STATUS: fixed
+    container_name: php83-fixed
+    ports:
+      - "8183:80"
+    profiles: ["fixed", "all"]
+
+  php82-fixed:
+    <<: *common-config
+    build:
+      context: .
+      args:
+        PHP_TAG: 8.2.35-apache
+        PHP_STATUS: fixed
+    container_name: php82-fixed
+    ports:
+      - "8182:80"
+    profiles: ["fixed", "all"]
