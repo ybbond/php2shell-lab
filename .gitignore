@@ -1,6 +1,10 @@
 .venv/
+lab/.venv/
 __pycache__/
 *.pyc
+node_modules/
+video/node_modules/
+out/
+video/out/
 .DS_Store
 !AGENTS.md
-

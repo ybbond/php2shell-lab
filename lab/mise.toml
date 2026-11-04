@@ -1,0 +1,31 @@
+[tools]
+python = "3.13"
+uv = "latest"
+
+[env]
+_.python.venv = { path = ".venv", create = true }
+COMPOSE_PROFILES = "all"
+
+[tasks.setup]
+description = "Inisialisasi virtualenv Python terisolasi dengan uv"
+run = "uv sync"
+
+[tasks.up]
+description = "Jalankan semua container PHP (unfixed & fixed)"
+run = "docker compose --profile all up -d --build"
+
+[tasks.up-unfixed]
+description = "Jalankan hanya container PHP versi belum dipatch (unfixed)"
+run = "docker compose --profile unfixed up -d --build"
+
+[tasks.up-fixed]
+description = "Jalankan hanya container PHP versi sudah dipatch (fixed)"
+run = "docker compose --profile fixed up -d --build"
+
+[tasks.down]
+description = "Matikan dan hapus container lab"
+run = "docker compose --profile all down"
+
+[tasks.check]
+description = "Cek status dan versi semua container PHP menggunakan script Python via uv"
+run = "uv run python scripts/check_lab.py"

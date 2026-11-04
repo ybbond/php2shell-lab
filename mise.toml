@@ -1,31 +1,66 @@
 [tools]
 python = "3.13"
 uv = "latest"
+bun = "1.4.4"
+# Remotion's CLI runs on Node via its shebang
+node = "22"
 
 [env]
-_.python.venv = { path = ".venv", create = true }
+_.python.venv = { path = "lab/.venv", create = true }
 COMPOSE_PROFILES = "all"
 
-[tasks.setup]
-description = "Inisialisasi virtualenv Python terisolasi dengan uv"
+# =============================================================================
+# Tasks untuk Lab Container Docker & Python (direktori ./lab)
+# =============================================================================
+[tasks."lab:setup"]
+description = "Inisialisasi virtualenv Python terisolasi di ./lab dengan uv"
+dir = "lab"
 run = "uv sync"
 
-[tasks.up]
+[tasks."lab:up"]
 description = "Jalankan semua container PHP (unfixed & fixed)"
+dir = "lab"
 run = "docker compose --profile all up -d --build"
 
-[tasks.up-unfixed]
+[tasks."lab:up-unfixed"]
 description = "Jalankan hanya container PHP versi belum dipatch (unfixed)"
+dir = "lab"
 run = "docker compose --profile unfixed up -d --build"
 
-[tasks.up-fixed]
+[tasks."lab:up-fixed"]
 description = "Jalankan hanya container PHP versi sudah dipatch (fixed)"
+dir = "lab"
 run = "docker compose --profile fixed up -d --build"
 
-[tasks.down]
-description = "Matikan dan hapus container lab"
+[tasks."lab:down"]
+description = "Matikan dan hapus seluruh container lab"
+dir = "lab"
 run = "docker compose --profile all down"
 
-[tasks.check]
+[tasks."lab:check"]
 description = "Cek status dan versi semua container PHP menggunakan script Python via uv"
+dir = "lab"
 run = "uv run python scripts/check_lab.py"
+
+# =============================================================================
+# Tasks untuk Video Presentasi Remotion (direktori ./video)
+# =============================================================================
+[tasks."video:install"]
+description = "Install dependensi Remotion menggunakan bun di ./video"
+dir = "video"
+run = "bun install"
+
+[tasks."video:dev"]
+description = "Jalankan Remotion Studio preview (localhost:3000)"
+dir = "video"
+run = "bun run dev"
+
+[tasks."video:typecheck"]
+description = "Jalankan TypeScript typecheck untuk proyek video Remotion"
+dir = "video"
+run = "bun run typecheck"
+
+[tasks."video:render"]
+description = "Render video presentasi ke video/out/main.mp4"
+dir = "video"
+run = "bun run render"

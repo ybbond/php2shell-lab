@@ -1,56 +1,83 @@
 # AGENTS.md — Konteks & Panduan untuk AI Agent
 
-Dokumen ini menyediakan konteks arsitektur, batasan konfigurasi, dan aturan kerja bagi AI Agent yang beroperasi di dalam direktori `video/php2shell-lab/`.
+Repository `php2shell-lab` ini terbagi secara rapi menjadi **dua sub-proyek terisolasi** agar tidak saling mengotori:
+1. **`lab/`** — Lingkungan Docker Compose multi-versi PHP (*Unfixed* vs *Fixed*) dan skrip pengujian Python (`uv`).
+2. **`video/`** — Proyek video presentasi Remotion (mengikuti arsitektur SOLID & KISS dari `KKA-1429-video-project`).
+
+Ikuti prinsip **SOLID** dan **KISS**. Utamakan perubahan kecil dan terfokus sesuai struktur di bawah ini.
 
 ---
 
-## 1. Tujuan Direktori Ini
+## Bagian 1: Lingkungan Lab Keamanan (`./lab`)
 
-Direktori ini adalah laboratorium demonstrasi untuk materi kuliah dan pembuatan video Keamanan Komputer yang membahas **CVE-2026-109618** (Out-of-Memory improper state handling) dan **CVE-2026-109619** (Use-After-Free pada worker state), dikenal sebagai **PHP2Shell**.
+### 1.1 Isolasi Toolchain (`mise` & `uv`)
+- **Jangan gunakan Python atau `pip` global.** Seluruh pemanggilan `python` dan `uv` wajib melalui `mise`.
+- Dari root repo:
+  - `mise run lab:setup` — sinkronisasi `.venv` di `lab/.venv`
+  - `mise run lab:up` / `mise run lab:up-unfixed` / `mise run lab:up-fixed` — menyalakan container
+  - `mise run lab:check` — memeriksa status ke-8 container
+  - `mise run lab:down` — mematikan container
+- Menambah paket Python di `lab/`: `cd lab && mise exec -- uv add <paket>`.
 
-Pengguna menulis kode reproduksi/pengujian keamanannya sendiri. Peran agen di direktori ini adalah membantu pengelolaan infrastruktur container, konfigurasi PHP/Apache, otomasi pengujian/observabilitas, serta dokumentasi.
-
----
-
-## 2. Aturan Wajib Isolasi Toolchain (`mise` & `uv`)
-
-1. **Jangan gunakan Python atau `pip` global.**
-   Seluruh eksekusi tool (`python`, `uv`, dll.) di direktori ini **wajib** dijalankan melalui `mise` dan `uv` yang sudah dikonfigurasi pada [`mise.toml`](./mise.toml).
-2. **Cara menjalankan perintah Python:**
-   - Gunakan `mise exec -- uv run python <script.py>` atau tambahkan task pada `mise.toml` lalu panggil `mise run <nama_task>`.
-3. **Cara menambah dependensi Python:**
-   - Gunakan `mise exec -- uv add <nama_paket>` agar tercatat rapi di [`pyproject.toml`](./pyproject.toml) dan `uv.lock` serta terinstal di `.venv/` lokal direktori ini.
-4. **Jika perlu memanggil binary `php` di sisi host (di luar Docker):**
-   - Tambahkan `php = "<versi>"` ke dalam `[tools]` di `mise.toml` alih-alih mengandalkan instalasi PHP global di macOS.
-
----
-
-## 3. Invarian Arsitektur Container & Memori (Jangan Diubah Tanpa Instruksi)
-
-Pengujian CVE-2026-109618 dan CVE-2026-109619 sangat bergantung pada perilaku memori dan *worker process reuse*. Pastikan invarian berikut tetap terjaga kecuali diminta secara eksplisit oleh pengguna:
-
-1. **Dua Lapisan Batas Memori:**
-   - **PHP `memory_limit = 2M`** di [`config/php.ini`](./config/php.ini): Sengaja dibuat sangat kecil agar *Zend Memory Manager* (ZMM) memicu kondisi Out-of-Memory internal (`zend_bailout` / `longjmp`) dengan alokasi minimal.
-   - **Docker `mem_limit: 48m` & `memswap_limit: 48m`** di [`docker-compose.yml`](./docker-compose.yml): Sengaja dibuat hemat RAM namun tetap memiliki ruang cukup di atas `2M` agar proses Apache tidak dibunuh oleh *Linux Kernel OOM Killer* (`SIGKILL`) ketika PHP mengalami OOM internal.
-2. **Worker Tunggal (`MaxRequestWorkers 1`):**
-   - Diatur pada [`config/mpm_prefork.conf`](./config/mpm_prefork.conf) (`StartServers 1`, `MinSpareServers 1`, `MaxSpareServers 1`, `MaxRequestWorkers 1`, `MaxConnectionsPerChild 0`).
-   - Konfigurasi ini memastikan setiap HTTP request berurutan masuk ke `worker_pid` yang sama, sehingga state antar-request pada satu worker dapat diamati secara deterministik.
-3. **Pemetaan Port & Versi:**
-   - **Unfixed (Port `808x`):**
-     - `php85-unfixed` (`8.5.11-apache`) -> `8085`
-     - `php84-unfixed` (`8.4.26-apache`) -> `8084`
-     - `php83-unfixed` (`8.3.35-apache`) -> `8083`
-     - `php82-unfixed` (`8.2.34-apache`) -> `8082`
-   - **Fixed (Port `818x`):**
-     - `php85-fixed` (`8.5.12-apache`) -> `8185`
-     - `php84-fixed` (`8.4.27-apache`) -> `8184`
-     - `php83-fixed` (`8.3.36-apache`) -> `8183`
-     - `php82-fixed` (`8.2.35-apache`) -> `8182`
+### 1.2 Invarian Memori & Worker (Jangan Diubah Tanpa Instruksi)
+Pengujian **CVE-2026-109618** (OOM bailout) dan **CVE-2026-109619** (worker state UAF) bergantung pada:
+1. **PHP `memory_limit = 2M`** di `lab/config/php.ini` — memicu *Zend Memory Manager* OOM internal (`zend_bailout`) dengan alokasi minimal.
+2. **Docker `mem_limit: 48m` & `memswap_limit: 48m`** di `lab/docker-compose.yml` — hemat RAM host namun di atas `2M` agar proses Apache tidak di-*kill* oleh Linux Kernel OOM Killer.
+3. **Worker Tunggal (`MaxRequestWorkers 1`)** di `lab/config/mpm_prefork.conf` — memastikan setiap request berurutan masuk ke `worker_pid` yang sama.
+4. **Jangan menimpa/menghapus** kode pengujian buatan pemilik di `lab/src/` atau `lab/scripts/` tanpa izin.
 
 ---
 
-## 4. Konvensi Penempatan File
+## Bagian 2: Proyek Video Presentasi Remotion (`./video`)
 
-- **`src/`** — Di-mount ke `/var/www/html` pada ke-8 container. Semua endpoint/target PHP disimpan di sini. Jangan menghapus atau menimpa file pengujian yang dibuat pengguna di dalam `src/` tanpa izin.
-- **`scripts/`** — Tempat menyimpan script pengujian, *benchmarking*, atau *health-check* berbasis Python.
-- **`config/`** — Tempat menyimpan konfigurasi `php.ini` dan `mpm_prefork.conf` yang di-mount secara *read-only* ke seluruh container.
+### 2.1 Perintah Utama
+Dari root repo (atau jalankan `bun run ...` langsung di dalam folder `video/`):
+
+```sh
+mise run video:dev        # Studio preview (default localhost:3000)
+mise run video:typecheck  # tsc --noEmit
+mise run video:render     # merender video/out/main.mp4
+```
+
+Tool berasal dari `mise.toml` (`bun = "1.4.4"`, serta `node = "22"` karena CLI Remotion berjalan di atas Node). `video/out/` dan `video/node_modules/` di-ignore oleh git.
+
+### 2.2 Struktur `video/`
+
+| Path | Tanggung Jawab |
+|---|---|
+| `video/src/timeline.ts` | Urutan scene serta seluruh teks dan durasi caption. Memvalidasi total durasi dan kecepatan baca. |
+| `video/src/Main.tsx` | Memutar scene secara berurutan dengan transisi fade dan overlay caption. |
+| `video/src/Root.tsx` | Mendaftarkan komposisi `Main` (1920x1080, 30 fps) dengan durasi dari `timeline.ts`. |
+| `video/src/scenes/*.tsx` | Satu file per scene, hanya berisi visual. |
+| `video/src/components/Stage.tsx` | Backdrop dan kanvas SVG 1920x1080. Mengekspor `GROUND_Y` dan `Ground`. |
+| `video/src/components/motion.tsx` | `useSeconds`, `ramp`, `Pop`. |
+| `video/src/components/characters.tsx` | `Person`, `Robot`. |
+| `video/src/components/labels.tsx` | `Tag`, `Bubble`, `Headline`. |
+| `video/src/components/props.tsx` | `Desk`, `Bulb`. |
+| `video/src/components/Captions.tsx` | Overlay teks caption di bagian bawah layar. |
+| `video/src/theme.ts` | `COLORS`, `FONT`. |
+
+### 2.3 Aturan Mengubah Video Remotion
+- **Menambah scene:** buat `video/src/scenes/X.tsx` dan tambahkan satu entri pada `TIMELINE` di `video/src/timeline.ts`.
+- **Total durasi:** `timeline.ts` akan melempar error kecuali jumlah durasi caption sama persis dengan `TARGET_SECONDS`. Jika menambah waktu, sesuaikan `TARGET_SECONDS` atau kurangi dari scene lain.
+- **Kecepatan caption:** `timeline.ts` melempar error jika melebihi `18` karakter per detik (`MAX_CHARS_PER_SECOND`). `seconds` harus menghasilkan jumlah frame bulat pada 30 fps, dan teks caption di dalam satu scene harus unik karena menjadi React `key`.
+- **Kanvas & Layout:** scene digambar menggunakan SVG pada kanvas `1920x1080`. Tempatkan karakter di `GROUND_Y` (titik origin berada di kaki). Caption menutupi area `y > 900`, jadi jaga elemen visual penting tetap di atas `y = 900`.
+- **Animasi deterministik:** turunkan seluruh animasi dari frame saat ini melalui `useSeconds`, `ramp`, dan `Pop`. Gunakan `random(seed)` dari Remotion (bukan `Math.random`), dan hindari `setTimeout` atau animasi CSS.
+- **Warna:** gunakan `COLORS` dari `video/src/theme.ts`.
+
+### 2.4 Verifikasi Visual Setelah Perubahan Video
+Lulus `typecheck` saja tidak cukup karena bug tata letak hanya terlihat pada frame hasil render. Render lalu periksa sampel frame:
+
+```sh
+mise run video:render
+ffmpeg -y -v error -i video/out/main.mp4 -vf "fps=1/4,scale=640:-1,tile=4x4" -frames:v 1 <scratch-dir>/sheet.png
+```
+
+### 2.5 Studio Pitfalls
+- **Pemilik mungkin sedang menjalankan Remotion Studio di port 3000.** Jangan melakukan `pkill` sembarangan pada proses Studio pemilik. Jika perlu menjalankan instance Studio sendiri untuk pengujian, gunakan `--port=<port-lain> --no-open` dan hentikan berdasarkan PID spesifik dari `lsof -nP -tiTCP:<port> -sTCP:LISTEN`.
+- **Jangan membuat editan sementara/eksperimen di `video/src/`** jika Studio pemilik sedang terbuka karena akan langsung *hot-reload*.
+
+---
+
+## Bagian 3: Git
+- Lakukan `git commit` hanya ketika diminta oleh pemilik.

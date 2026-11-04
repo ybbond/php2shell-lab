@@ -1,0 +1,4 @@
+[tools]
+bun = "1.4.4"
+# Remotion's CLI runs on Node via its shebang
+node = "22"
