@@ -15,6 +15,7 @@ Ikuti prinsip **SOLID** dan **KISS**. Utamakan perubahan kecil dan terfokus sesu
 - Dari root repo:
   - `mise run lab:setup` — sinkronisasi `.venv` di `lab/.venv`
   - `mise run lab:up` / `mise run lab:up-unfixed` / `mise run lab:up-fixed` — menyalakan container
+  - `cd lab && mise exec -- docker compose --profile all build` — build ulang image; wajib setelah mengubah `lab/Dockerfile` atau `PHP_TAG`
   - `mise run lab:check` — memeriksa status ke-8 container
   - `mise run lab:down` — mematikan container
 - Menambah paket Python di `lab/`: `cd lab && mise exec -- uv add <paket>`.

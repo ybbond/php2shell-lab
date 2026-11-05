@@ -20,17 +20,17 @@ run = "uv sync"
 [tasks."lab:up"]
 description = "Jalankan semua container PHP (unfixed & fixed)"
 dir = "lab"
-run = "docker compose --profile all up -d --build"
+run = "docker compose --profile all up -d"
 
 [tasks."lab:up-unfixed"]
 description = "Jalankan hanya container PHP versi belum dipatch (unfixed)"
 dir = "lab"
-run = "docker compose --profile unfixed up -d --build"
+run = "docker compose --profile unfixed up -d"
 
 [tasks."lab:up-fixed"]
 description = "Jalankan hanya container PHP versi sudah dipatch (fixed)"
 dir = "lab"
-run = "docker compose --profile fixed up -d --build"
+run = "docker compose --profile fixed up -d"
 
 [tasks."lab:down"]
 description = "Matikan dan hapus seluruh container lab"

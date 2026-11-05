@@ -92,6 +92,7 @@ Dari root direktori `php2shell-lab`:
 | `mise run lab:up` | Menjalankan seluruh 8 container PHP (*unfixed* & *fixed*) |
 | `mise run lab:up-unfixed` | Menjalankan hanya 4 container *unfixed* (`8082`–`8085`) |
 | `mise run lab:up-fixed` | Menjalankan hanya 4 container *fixed* (`8182`–`8185`) |
+| `cd lab && mise exec -- docker compose --profile all build` | Build ulang image; wajib setelah mengubah `lab/Dockerfile` atau `PHP_TAG` karena `lab:up*` tidak lagi build otomatis |
 | `mise run lab:check` | Mengecek status HTTP, versi PHP, status patch, dan `worker_pid` |
 | `mise run lab:demo` | Demo berdampingan CVE-2026-109618 & CVE-2026-109619 (unfixed vs fixed) |
 | `mise run lab:down` | Mematikan dan menghapus seluruh container lab |
