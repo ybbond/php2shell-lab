@@ -9,7 +9,7 @@ Dokumen ini berisi alur kerja lengkap untuk menjalankan laboratorium Docker (`./
 Dari root submodule `php2shell-lab`, aktifkan `mise` dan inisialisasi environment Python (`uv`) serta proyek video (`bun`):
 
 ```bash
-cd /Users/ybbond/puph/AKK-1951/php2shell-lab
+cd php2shell-lab
 
 mise trust
 mise install
@@ -85,7 +85,7 @@ Tambahkan file PHP yang ingin diuji di dalam folder `lab/src/`, misalnya `lab/sr
 Simpan script pengujian Python Anda di `lab/scripts/`, lalu jalankan melalui `mise` dan `uv`:
 
 ```bash
-cd /Users/ybbond/puph/AKK-1951/php2shell-lab/lab
+cd php2shell-lab/lab
 mise exec -- uv run python scripts/<nama_script_pengujian>.py
 ```
 

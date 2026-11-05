@@ -83,7 +83,7 @@ php2shell-lab/                  # Root Git Submodule
 
 ## 4. Daftar Perintah (`mise`)
 
-Dari root direktori `/Users/ybbond/puph/AKK-1951/php2shell-lab`:
+Dari root direktori `php2shell-lab`:
 
 ### Perintah Lab Keamanan (`./lab`)
 | Perintah | Fungsi |
