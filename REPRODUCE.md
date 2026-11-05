@@ -104,7 +104,91 @@ docker exec -it php84-fixed ls -la /tmp/php_sessions
 
 ---
 
-## 5. Mematikan Container Lab
+## 5. Demo CVE-2026-109618 & CVE-2026-109619 (Siap Pakai)
+
+Dua endpoint simulasi edukatif sudah tersedia di `lab/src/` (otomatis ter-mount ke semua container), plus satu script demo berdampingan di `lab/scripts/demo_cves.py`:
+
+| File | Fungsi |
+| :--- | :--- |
+| `lab/src/cve109618_oom.php` | Simulasi OOM bailout (`zend_bailout`) yang meninggalkan state internal terinisialisasi sebagian tanpa rollback |
+| `lab/src/cve109619_uaf.php` | Simulasi use-after-free: pointer usang di registry worker tingkat proses dibaca ulang oleh request berikutnya di PID yang sama |
+| `lab/scripts/demo_cves.py` | Menjalankan urutan demo lengkap pada pasangan unfixed vs fixed, lalu menampilkan tabel perbandingan |
+
+### 5.1 Jalankan Demo Otomatis (Disarankan untuk Presentasi)
+
+```bash
+# Nyalakan minimal satu pasangan container
+mise run lab:up
+
+# Demo penuh (default pasangan PHP 8.4: unfixed 8084 vs fixed 8184)
+mise run lab:demo
+
+# Demo dengan pasangan versi lain, mis. PHP 8.5
+mise exec -- uv run python scripts/demo_cves.py --unfixed-port 8085 --fixed-port 8185
+```
+
+Script akan menjalankan dan membandingkan secara berurutan:
+
+1. **Langkah 0 — Determinisme worker:** 3 request berturut-turut; `worker_pid` selalu sama (bukti `MaxRequestWorkers 1`), prerequisite CVE-2026-109619.
+2. **CVE-2026-109618:** picu OOM di kedua container → keduanya mengalami fatal error `Allowed memory size ... exhausted` (zend_bailout), TAPI hanya versi unfixed yang menyisakan state `in_flight` (terinisialisasi sebagian, tanpa rollback); versi fixed menunjukkan `SAFE (rolled back)`.
+3. **CVE-2026-109619:** stage & free record (request A), lalu baca ulang (request B) di PID worker yang sama → versi unfixed menunjukkan `USE AFTER FREE`; versi fixed menunjukkan `SAFE`.
+
+### 5.2 Demo Manual via Browser (Interaktif)
+
+Buka berdampingan, lalu klik tombol di halaman sesuai urutan narasi:
+
+| Langkah | Unfixed (`8084`) | Fixed (`8184`) |
+| :--- | :--- | :--- |
+| Picu OOM → cek state | `http://localhost:8084/cve109618_oom.php?action=oom` lalu `?action=status` | `http://localhost:8184/cve109618_oom.php?action=oom` lalu `?action=status` |
+| Stage & free → baca ulang | `http://localhost:8084/cve109619_uaf.php?action=stage` lalu `?action=read` | `http://localhost:8184/cve109619_uaf.php?action=stage` lalu `?action=read` |
+
+Setiap halaman menampilkan badge **UNFIXED/FIXED**, worker PID, verdict, dan isi state/registry lengkap — cocok untuk ditampilkan ke proyektor. Tombol **Reset** membersihkan state agar demo bisa diulang.
+
+> **Catatan jujur untuk kelas:** kedua endpoint adalah **simulasi edukatif**. Perilaku unfixed vs fixed diemulasi dari env `LAB_PHP_STATUS` (diset saat build Docker) karena image resmi `php:*-apache` tidak memuat perbedaan patch internal Zend. Simulasi ini memodelkan pola kedua CVE secara deterministik dan aman didemokan.
+
+### 5.3 Reproduksi Minimal dengan `curl` (Tanpa Browser / Python)
+
+Karena kedua endpoint murni HTTP, seluruh demo juga bisa direproduksi hanya dengan `curl` — berguna saat berdemo lewat terminal, atau untuk diketik langsung di kelas. Contoh untuk pasangan PHP 8.4 (ulangi dengan port `8184` untuk versi fixed):
+
+```bash
+# Langkah 0 — Determinisme worker: worker_pid harus sama di ketiga kali
+for i in 1 2 3; do curl -s "http://localhost:8084/?format=json" | grep worker_pid; done
+
+# CVE-2026-109618 — picu OOM, lalu lihat verdict state yang tertinggal
+curl -s "http://localhost:8084/cve109618_oom.php?action=reset" > /dev/null
+curl -s "http://localhost:8084/cve109618_oom.php?action=oom" \
+    | grep -oE 'Allowed memory size[^<]*|VULNERABLE PATTERN|SAFE \(rolled back\)'
+curl -s "http://localhost:8084/cve109618_oom.php?action=status" \
+    | grep -oE 'VULNERABLE PATTERN|SAFE \(rolled back\)|CLEAN'
+
+# CVE-2026-109619 — stage & free (request A), lalu baca ulang (request B)
+curl -s "http://localhost:8084/cve109619_uaf.php?action=reset" > /dev/null
+curl -s "http://localhost:8084/cve109619_uaf.php?action=stage" > /dev/null
+curl -s "http://localhost:8084/cve109619_uaf.php?action=read" \
+    | grep -oE 'USE AFTER FREE|SAFE|CLEAN'
+```
+
+Hasil yang diharapkan:
+
+| Perintah | Unfixed (`8084`) | Fixed (`8184`) |
+| :--- | :--- | :--- |
+| `cve109618_oom.php?action=oom` | `Allowed memory size ...` + `VULNERABLE PATTERN` | `Allowed memory size ...` + `SAFE (rolled back)` |
+| `cve109619_uaf.php?action=read` | `USE AFTER FREE` | `SAFE` |
+
+Perbandingan berdampingan sekali jalan:
+
+```bash
+for port in 8084 8184; do
+    echo "=== port $port ==="
+    curl -s "http://localhost:$port/cve109618_oom.php?action=oom" | grep -oE 'VULNERABLE PATTERN|SAFE \(rolled back\)'
+    curl -s "http://localhost:$port/cve109619_uaf.php?action=stage" > /dev/null
+    curl -s "http://localhost:$port/cve109619_uaf.php?action=read" | grep -oE 'USE AFTER FREE|SAFE|CLEAN'
+done
+```
+
+> Tip demo: kesalahan fatal OOM sengaja disembunyikan dari browser (`display_errors` off saat request OOM) tetapi pesannya tetap tertanam di halaman hasil — sehingga grep `Allowed memory size` di atas tetap menemukannya. Untuk melihat fatal error mentah, gunakan `docker compose -f lab/docker-compose.yml logs php84-unfixed`.
+
+## 6. Mematikan Container Lab
 
 ```bash
 mise run lab:down

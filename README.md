@@ -27,6 +27,7 @@ php2shell-lab/                  # Root Git Submodule
 ├── AGENTS.md                   # Konteks & aturan kerja lengkap untuk AI Agent (Lab + Video)
 ├── README.md                   # Dokumentasi utama proyek
 ├── REPRODUCE.md                # Panduan langkah demi langkah menjalankan lab Docker & reproduksi
+├── PENJELASAN.md               # Penjelasan kedua CVE untuk pembaca awam (latar belakang → solusi)
 ├── mise.toml                   # Konfigurasi terpadu (python, uv, bun, node) & task runner
 ├── lab/                        # [Bagian 1] Lingkungan Docker PHP & Skrip Pengujian Python
 │   ├── Dockerfile              # Image builder berbasis php:<tag>-apache
@@ -37,9 +38,12 @@ php2shell-lab/                  # Root Git Submodule
 │   │   ├── php.ini             # memory_limit = 2M & session upload progress
 │   │   └── mpm_prefork.conf    # MaxRequestWorkers = 1 (determinisme PID worker & hemat RAM)
 │   ├── src/                    # Di-mount ke /var/www/html di semua container
-│   │   └── index.php           # Endpoint diagnostik (HTML & ?format=json)
+│   │   ├── index.php           # Endpoint diagnostik (HTML & ?format=json)
+│   │   ├── cve109618_oom.php   # Demo simulasi CVE-2026-109618 (OOM bailout state)
+│   │   └── cve109619_uaf.php   # Demo simulasi CVE-2026-109619 (worker state UAF)
 │   └── scripts/
-│       └── check_lab.py        # Pemeriksa status ke-8 container secara serentak
+│       ├── check_lab.py        # Pemeriksa status ke-8 container secara serentak
+│       └── demo_cves.py        # Demo berdampingan kedua CVE (unfixed vs fixed)
 └── video/                      # [Bagian 2] Proyek Video Presentasi Remotion
     ├── mise.toml               # Isolasi bun = "1.4.4" & node = "22"
     ├── package.json            # Skrip dev, typecheck, render (Remotion 4 + React 19)
@@ -81,6 +85,7 @@ Dari root direktori `/Users/ybbond/puph/AKK-1951/php2shell-lab`:
 | `mise run lab:up-unfixed` | Menjalankan hanya 4 container *unfixed* (`8082`–`8085`) |
 | `mise run lab:up-fixed` | Menjalankan hanya 4 container *fixed* (`8182`–`8185`) |
 | `mise run lab:check` | Mengecek status HTTP, versi PHP, status patch, dan `worker_pid` |
+| `mise run lab:demo` | Demo berdampingan CVE-2026-109618 & CVE-2026-109619 (unfixed vs fixed) |
 | `mise run lab:down` | Mematikan dan menghapus seluruh container lab |
 
 ### Perintah Video Presentasi Remotion (`./video`)

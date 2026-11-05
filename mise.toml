@@ -42,6 +42,11 @@ description = "Cek status dan versi semua container PHP menggunakan script Pytho
 dir = "lab"
 run = "uv run python scripts/check_lab.py"
 
+[tasks."lab:demo"]
+description = "Demo berdampingan CVE-2026-109618 & CVE-2026-109619 (unfixed vs fixed)"
+dir = "lab"
+run = "uv run python scripts/demo_cves.py"
+
 # =============================================================================
 # Tasks untuk Video Presentasi Remotion (direktori ./video)
 # =============================================================================
