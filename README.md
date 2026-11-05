@@ -18,6 +18,12 @@ Kedua celah keamanan ini berkaitan dengan manajemen memori internal pada runtime
    - Terkait state di tingkat proses worker yang masih menyimpan referensi ke memori milik request sebelumnya yang sudah dibebaskan (*freed*).
    - Request berikutnya yang dilayani oleh **proses worker yang sama** dapat membaca atau mengeksekusi referensi usang tersebut.
 
+> **Disclaimer (wajib dibaca sebelum menggunakan materi ini):**
+> 1. Repository ini adalah **materi pembelajaran untuk tugas kuliah** Keamanan Komputer dan Jaringan. Detail kerentanan disederhanakan dan *perilaku unfixed vs fixed pada demo diemulasi* (lihat §6 `PENJELASAN.md`) — gunakan sebagai model konsep, bukan sebagai rujukan analisis CVE primer.
+> 2. Seluruh kode di `lab/src/` **hanya untuk dijalankan di container Docker lab ini secara lokal**. Endpoint-nya tidak memiliki autentikasi dan menampilkan detail error — **jangan pernah** menyalinnya ke server/hosting yang dapat diakses publik.
+>
+> Versi lengkap: [`DISCLAIMER.md`](./DISCLAIMER.md). Dilisensikan di bawah MIT — [`LICENSE`](./LICENSE).
+
 ---
 
 ## 2. Struktur Direktori
@@ -26,6 +32,8 @@ Kedua celah keamanan ini berkaitan dengan manajemen memori internal pada runtime
 php2shell-lab/                  # Root Git Submodule
 ├── AGENTS.md                   # Konteks & aturan kerja lengkap untuk AI Agent (Lab + Video)
 ├── README.md                   # Dokumentasi utama proyek
+├── LICENSE                     # Lisensi MIT
+├── DISCLAIMER.md               # Disclaimer tujuan pendidikan & larangan penyalahgunaan
 ├── REPRODUCE.md                # Panduan langkah demi langkah menjalankan lab Docker & reproduksi
 ├── PENJELASAN.md               # Penjelasan kedua CVE untuk pembaca awam (latar belakang → solusi)
 ├── mise.toml                   # Konfigurasi terpadu (python, uv, bun, node) & task runner
